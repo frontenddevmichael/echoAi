@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect, useRef } from 'react';
 
 export type AIMode = 'chat' | 'code_generation' | 'code_modification' | 'code_explanation' | 'debugging';
 
@@ -25,7 +25,8 @@ interface AppContextType {
   // Session
   session: Session | null;
   messages: Message[];
-  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => void;
+  addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => string;
+  updateMessage: (id: string, updates: Partial<Message>) => void;
   clearMessages: () => void;
   
   // Mode
@@ -43,14 +44,14 @@ interface AppContextType {
   // Settings
   apiKey: string;
   setApiKey: (key: string) => void;
-  apiProvider: 'openrouter' | 'together' | 'huggingface' | 'custom';
-  setApiProvider: (provider: 'openrouter' | 'together' | 'huggingface' | 'custom') => void;
+  apiProvider: 'openrouter' | 'together' | 'huggingface' | 'custom' | 'lovable';
+  setApiProvider: (provider: 'openrouter' | 'together' | 'huggingface' | 'custom' | 'lovable') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 function generateId() {
-  return Math.random().toString(36).substring(2, 15);
+  return crypto.randomUUID();
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -60,7 +61,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKeyState] = useState('');
-  const [apiProvider, setApiProviderState] = useState<'openrouter' | 'together' | 'huggingface' | 'custom'>('openrouter');
+  const [apiProvider, setApiProviderState] = useState<'openrouter' | 'together' | 'huggingface' | 'custom' | 'lovable'>('lovable');
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -111,13 +112,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [session, messages, mode]);
 
-  const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>) => {
+  const addMessage = useCallback((message: Omit<Message, 'id' | 'timestamp'>): string => {
+    const id = generateId();
     const newMessage: Message = {
       ...message,
-      id: generateId(),
+      id,
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, newMessage]);
+    return id;
+  }, []);
+
+  const updateMessage = useCallback((id: string, updates: Partial<Message>) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === id ? { ...msg, ...updates } : msg
+    ));
   }, []);
 
   const clearMessages = useCallback(() => {
@@ -143,7 +152,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('echo-api-key', key);
   }, []);
 
-  const setApiProvider = useCallback((provider: 'openrouter' | 'together' | 'huggingface' | 'custom') => {
+  const setApiProvider = useCallback((provider: 'openrouter' | 'together' | 'huggingface' | 'custom' | 'lovable') => {
     setApiProviderState(provider);
     localStorage.setItem('echo-api-provider', provider);
   }, []);
@@ -154,6 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         session,
         messages,
         addMessage,
+        updateMessage,
         clearMessages,
         mode,
         setMode,

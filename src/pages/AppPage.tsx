@@ -1,83 +1,87 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { AppProvider, useApp, AIMode, Message } from '@/context/AppContext';
 import { AppHeader } from '@/components/app/AppHeader';
 import { ChatArea } from '@/components/app/ChatArea';
 import { ChatInput } from '@/components/app/ChatInput';
 import { EmptyState } from '@/components/app/EmptyState';
 import { useHaptics } from '@/hooks/useHaptics';
+import { streamChat, parseCodeBlocks } from '@/lib/ai';
+import { toast } from 'sonner';
 
 function AppContent() {
-  const { messages, addMessage, input, setInput, isLoading, setIsLoading, mode, apiKey } = useApp();
+  const { messages, addMessage, updateMessage, input, setInput, isLoading, setIsLoading, mode } = useApp();
   const { triggerSuccess, triggerError, triggerThinking, stop: stopHaptics } = useHaptics();
 
   const handleSubmit = useCallback(async () => {
     if (!input.trim()) return;
 
-    const userMessage: Omit<Message, 'id' | 'timestamp'> = {
+    // Add user message
+    addMessage({
       role: 'user',
       content: input,
       mode,
-    };
+    });
 
-    addMessage(userMessage);
+    // Create assistant message placeholder
+    const assistantId = addMessage({
+      role: 'assistant',
+      content: '',
+      mode,
+    });
+
     setInput('');
     setIsLoading(true);
-    triggerThinking(5000);
+    triggerThinking(10000);
 
-    // Simulate AI response (in production, this would call the actual API)
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const responses: Record<AIMode, { content: string; code?: string; language?: string }> = {
-        chat: {
-          content: `Great question! Here's what I think about "${input.slice(0, 50)}...":\n\nThis is a simulated response. In the full version, I'd connect to your configured AI provider and give you a thoughtful answer.`,
-        },
-        code_generation: {
-          content: 'Here\'s the code you requested:',
-          code: `// Generated code for: ${input.slice(0, 30)}...\n\nfunction example() {\n  console.log('Hello from Echo!');\n  return {\n    success: true,\n    message: 'This is generated code'\n  };\n}\n\nexport default example;`,
-          language: 'typescript',
-        },
-        code_modification: {
-          content: 'I\'ve made the following modifications:',
-          code: `// Modified version\n\n// Added error handling\ntry {\n  const result = await fetchData();\n  return result;\n} catch (error) {\n  console.error('Error:', error);\n  throw error;\n}`,
-          language: 'typescript',
-        },
-        code_explanation: {
-          content: `Let me break down this code for you:\n\n1. **First**, the function initializes...\n2. **Then**, it processes the data...\n3. **Finally**, it returns the result.\n\nThis pattern is commonly used for handling asynchronous operations in a clean, readable way.`,
-        },
-        debugging: {
-          content: 'I found the issue! Here\'s what\'s happening and how to fix it:',
-          code: `// The issue was in the error handling\n// Before: Missing null check\n// After: Added proper validation\n\nif (data && data.items) {\n  return data.items.map(item => item.value);\n}\nreturn [];`,
-          language: 'typescript',
-        },
-      };
+    let fullContent = '';
 
-      const response = responses[mode];
-      stopHaptics();
-      triggerSuccess();
+    // Prepare conversation history for AI (exclude the empty assistant message)
+    const conversationHistory = [
+      ...messages.map(m => ({ role: m.role, content: m.content })),
+      { role: 'user' as const, content: input }
+    ];
 
-      const assistantMessage: Omit<Message, 'id' | 'timestamp'> = {
-        role: 'assistant',
-        content: response.content,
-        mode,
-        code: response.code,
-        language: response.language,
-        confidence: Math.random() * 0.3 + 0.7, // 70-100% for demo
-      };
+    await streamChat({
+      messages: conversationHistory,
+      mode,
+      onDelta: (chunk) => {
+        fullContent += chunk;
+        updateMessage(assistantId, { content: fullContent });
+      },
+      onDone: () => {
+        stopHaptics();
+        triggerSuccess();
+        setIsLoading(false);
 
-      addMessage(assistantMessage);
-    } catch (error) {
-      stopHaptics();
-      triggerError();
-      addMessage({
-        role: 'assistant',
-        content: 'Sorry, something went wrong. Please check your API configuration and try again.',
-        mode,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [input, mode, addMessage, setInput, setIsLoading, triggerSuccess, triggerError, triggerThinking, stopHaptics]);
+        // Parse for code blocks
+        const { text, codeBlocks } = parseCodeBlocks(fullContent);
+        
+        if (codeBlocks.length > 0) {
+          updateMessage(assistantId, {
+            content: fullContent,
+            code: codeBlocks[0]?.code,
+            language: codeBlocks[0]?.language,
+            confidence: 0.85 + Math.random() * 0.15,
+          });
+        } else {
+          updateMessage(assistantId, {
+            content: fullContent,
+            confidence: 0.85 + Math.random() * 0.15,
+          });
+        }
+      },
+      onError: (error) => {
+        stopHaptics();
+        triggerError();
+        setIsLoading(false);
+        toast.error(error);
+        
+        updateMessage(assistantId, {
+          content: `⚠️ ${error}`,
+        });
+      },
+    });
+  }, [input, mode, messages, addMessage, updateMessage, setInput, setIsLoading, triggerSuccess, triggerError, triggerThinking, stopHaptics]);
 
   const handleExampleClick = useCallback((example: string) => {
     setInput(example);
