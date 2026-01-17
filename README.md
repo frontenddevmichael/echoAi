@@ -1,73 +1,186 @@
-# Welcome to your Lovable project
+# Echo AI
 
-## Project info
+**Echo AI** is a production-grade, intent-aware AI coding assistant built to feel as refined as a native Apple application and as capable as a senior developer working beside you.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+It understands *what you mean*, not just *what you type* — automatically detecting whether your request is conversational, code-related, or debugging-focused, and responding with the appropriate intelligence without forcing manual mode switching.
 
-## How can I edit this code?
+This is not an MVP.
+This is a fully intentional, immersive, production-ready system.
 
-There are several ways of editing your application.
+---
 
-**Use Lovable**
+## ✨ Why Echo AI Exists
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Most AI tools optimize for output.
 
-Changes made via Lovable will be committed automatically to this repo.
+Echo AI optimizes for **experience, clarity, and trust**.
 
-**Use your preferred IDE**
+* Intent-aware AI routing
+* Code-first workflows with clean diffs
+* Persistent AI memory via Supabase
+* Deep, contextual haptics
+* Apple-grade black & white UI system
+* Cinematic, non-generic animations
+* Offline-capable PWA
+* Human-written, natural content tone
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Every decision is deliberate. Nothing is decorative.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+---
 
-Follow these steps:
+## 🧠 Core Intelligence
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Intent Detection Engine
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Echo AI automatically classifies user input into:
 
-# Step 3: Install the necessary dependencies.
-npm i
+* Conversational chat
+* Code generation
+* Code modification / refactoring
+* Debugging
+* Code explanation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+No toggles. No friction.
+The system adapts instantly.
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Advanced Code Capabilities
 
-**Use GitHub Codespaces**
+* Multi-language code generation
+* Syntax-highlighted output
+* Diff / patch views for modifications
+* Inline comment suggestions
+* Explain-this-function for selected code
+* Refactor recommendations
+* Copy, export, and version-safe outputs
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Code is treated as structured material — not plain text.
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## 🧬 Persistent AI Memory (Supabase)
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Echo AI uses a hybrid memory model:
 
-## How can I deploy this project?
+* **Frontend cache** for offline-first sessions
+* **Backend persistence** for long-term memory and device sync
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+Stored data includes:
 
-## Can I connect a custom domain to my Lovable project?
+* Session history
+* Code context
+* User preferences
+* Interaction patterns
 
-Yes, you can!
+Memory syncs seamlessly once connectivity is restored.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📱 PWA & Mobile-First Design
+
+* Fully installable Progressive Web App
+* Offline usage support
+* Touch-optimized interface
+* Responsive across mobile, tablet, and desktop
+
+Echo AI is designed for real use — not demos.
+
+---
+
+## 🎨 Design System Philosophy
+
+Echo AI is designed as if built by an Apple platform team.
+
+* Two-color system only:
+
+  * **Dark Mode:** black background, white accents
+  * **Light Mode:** white background, black accents
+* No gradients
+* No visual noise
+* Consistent spacing and hierarchy
+* SF-style typography for UI and code
+* Subtle depth and rounded geometry
+
+Minimal. Timeless. Focused.
+
+---
+
+## 🎬 Motion & Interaction Design
+
+Animations are **cinematic and purposeful**, never decorative:
+
+* Curved-path fade-ins on landing sections
+* Staggered, line-by-line code reveals
+* 3D panel transitions between states
+* Liquid ripple AI “thinking” indicator
+* Elastic micro-interactions on touch
+* Scroll-velocity-based motion effects
+
+No pulsing blobs. No generic loaders.
+
+---
+
+## 📳 Deep Haptics System
+
+Haptics are treated as a communication layer:
+
+* Button taps and confirmations
+* Mode transitions
+* Errors and warnings
+* AI thinking and generation feedback
+* Intensity varies by:
+
+  * Action importance
+  * Code size
+  * AI confidence level
+
+Haptics are synchronized with motion and can be customized or disabled.
+
+---
+
+## 🧪 Autonomous Build & Quality Loop
+
+Echo AI is designed to evolve autonomously:
+
+* Feature-by-feature development
+* Automated testing after each implementation
+* Automatic correction and retesting on failure
+* No feature is considered complete until fully verified
+* Production readiness is the baseline, not a milestone
+
+---
+
+## 🛠 Tech Stack
+
+* **Frontend:** React, Tailwind CSS
+* **Animations:** Framer Motion / GSAP
+* **Backend:** Supabase (memory, sessions)
+* **AI:** User-provided LLM API
+  (OpenRouter, Together AI, Hugging Face supported)
+* **State:** React Context + local cache + Supabase sync
+* **PWA:** Workbox / Next.js PWA tooling
+* **Deployment:** Vercel / Netlify
+
+---
+
+## 🚀 Project Status
+
+**Production-grade build in progress.**
+
+Echo AI is a long-term project focused on:
+
+* Craft
+* Performance
+* Experience
+* Real-world usability
+
+---
+
+## 📄 License
+
+MIT License.
+
+---
+
+Echo AI is built with intent — not shortcuts.
