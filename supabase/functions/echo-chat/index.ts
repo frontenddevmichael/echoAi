@@ -5,65 +5,80 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type AIMode = 'chat' | 'code_generation' | 'code_modification' | 'code_explanation' | 'debugging';
+// Intent types that Echo can detect
+type Intent = 
+  | 'conversation'
+  | 'code_generation'
+  | 'code_modification'
+  | 'code_explanation'
+  | 'debugging'
+  | 'mixed';
 
-const systemPrompts: Record<AIMode, string> = {
-  chat: `You are Echo, a helpful AI coding assistant. You're friendly, knowledgeable, and always aim to provide clear, concise answers. You can discuss any programming topic, explain concepts, and help with general coding questions. Keep responses conversational but informative.`,
-  
-  code_generation: `You are Echo, an expert code generator. When given a description, you write clean, production-ready code following best practices. 
+interface ChatRequest {
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  currentCode?: string;
+}
+
+// System prompt for Echo - intent-aware, code-aware assistant
+const systemPrompt = `You are Echo, an AI coding assistant. You are calm, precise, and helpful.
+
+CRITICAL RESPONSE FORMAT:
+You must respond with valid JSON in this exact structure:
+{
+  "intent": "conversation" | "code_generation" | "code_modification" | "code_explanation" | "debugging" | "mixed",
+  "chat": "Your conversational response here. Keep it concise and developer-to-developer.",
+  "code": "The complete code if any, or null",
+  "language": "The programming language if code exists, or null",
+  "filename": "Suggested filename if code exists, or null"
+}
+
+INTENT DETECTION RULES:
+- "conversation": General chat, questions, greetings, no code involved
+- "code_generation": User asks you to create/write/build something
+- "code_modification": User provides code and asks to change/refactor/improve it
+- "code_explanation": User asks you to explain code or concepts with code examples
+- "debugging": User has errors, bugs, or asks to fix something
+- "mixed": Complex request involving multiple intents
+
+RESPONSE STYLE:
+- Be concise. No filler phrases.
+- Sound like a senior developer helping a colleague.
+- Never use emojis.
+- When generating code, provide complete, working code.
+- When explaining, be clear but not verbose.
+- For errors, identify root cause first.
 
 IMPORTANT:
-- Always include the complete, working code
-- Use TypeScript/JavaScript by default unless another language is specified
-- Include helpful comments explaining key parts
-- Format code properly with consistent indentation
-- If the request is ambiguous, make reasonable assumptions and note them
-
-Start your response with a brief explanation, then provide the code.`,
-
-  code_modification: `You are Echo, an expert code modifier. When given existing code and modification instructions, you make the requested changes while maintaining code quality.
-
-IMPORTANT:
-- Show the modified code in full
-- Explain what changes you made and why
-- Maintain the original code style and conventions
-- If you see potential issues in the original code, mention them
-- Use clear diff-style explanations when helpful`,
-
-  code_explanation: `You are Echo, an expert at explaining code. Break down code in a way that's easy to understand, regardless of the reader's experience level.
-
-IMPORTANT:
-- Start with a high-level overview of what the code does
-- Then go through important parts step by step
-- Explain any complex patterns or concepts
-- Note potential edge cases or issues
-- Keep explanations clear and jargon-free when possible`,
-
-  debugging: `You are Echo, an expert debugger. When given error messages or buggy code, you identify the problem and provide solutions.
-
-IMPORTANT:
-- Identify the root cause of the error
-- Explain WHY the error occurred
-- Provide a clear fix with corrected code
-- Suggest ways to prevent similar issues
-- If multiple issues exist, address them in order of importance`,
-};
+- Always respond with valid JSON only. No markdown, no extra text.
+- If the user provides code context, consider it when responding.
+- The "code" field should contain ONLY the code, no markdown backticks.`;
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages, mode = 'chat' } = await req.json();
+    const { messages, currentCode }: ChatRequest = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = systemPrompts[mode as AIMode] || systemPrompts.chat;
+    // Build context-aware messages
+    const contextMessages = [...messages];
+    
+    // If there's current code in the sandbox, add it as context
+    if (currentCode && currentCode.trim()) {
+      const lastUserIndex = contextMessages.findLastIndex(m => m.role === 'user');
+      if (lastUserIndex >= 0) {
+        contextMessages[lastUserIndex] = {
+          ...contextMessages[lastUserIndex],
+          content: `[Current code in sandbox]:\n${currentCode}\n\n[User message]: ${contextMessages[lastUserIndex].content}`
+        };
+      }
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -75,9 +90,9 @@ serve(async (req) => {
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          ...messages,
+          ...contextMessages,
         ],
-        stream: true,
+        stream: false,
       }),
     });
 
@@ -103,9 +118,57 @@ serve(async (req) => {
       );
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-    });
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    
+    if (!content) {
+      return new Response(
+        JSON.stringify({ error: "No response from AI" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Try to parse as JSON, fallback to conversation if invalid
+    let parsed;
+    try {
+      // Clean potential markdown wrapping
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.slice(7);
+      }
+      if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.slice(3);
+      }
+      if (cleanContent.endsWith('```')) {
+        cleanContent = cleanContent.slice(0, -3);
+      }
+      cleanContent = cleanContent.trim();
+      
+      parsed = JSON.parse(cleanContent);
+    } catch {
+      // If not valid JSON, treat as plain conversation
+      parsed = {
+        intent: 'conversation',
+        chat: content,
+        code: null,
+        language: null,
+        filename: null
+      };
+    }
+
+    // Validate the response structure
+    const result = {
+      intent: parsed.intent || 'conversation',
+      chat: parsed.chat || parsed.message || content,
+      code: parsed.code || null,
+      language: parsed.language || null,
+      filename: parsed.filename || null
+    };
+
+    return new Response(
+      JSON.stringify(result),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Echo chat error:", error);
     return new Response(

@@ -1,80 +1,49 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRef, useEffect } from 'react';
-import { Bot, User } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Message } from '@/context/AppContext';
-import { CodeBlock } from '@/components/CodeBlock';
 import { ThinkingDots } from '@/components/ThinkingIndicator';
 import { cn } from '@/lib/utils';
 
 interface ChatMessageProps {
   message: Message;
-  isLast?: boolean;
 }
 
-function ChatMessage({ message, isLast }: ChatMessageProps) {
+function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] as const }}
+      transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
       className={cn(
-        'flex gap-3 px-4 py-4',
+        'flex gap-3 px-4 py-3',
         isUser ? 'flex-row-reverse' : ''
       )}
     >
-      {/* Avatar */}
-      <div className={cn(
-        'flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center',
-        isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-      )}>
-        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-      </div>
+      {/* Avatar - only for user */}
+      {isUser && (
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-foreground flex items-center justify-center">
+          <User className="w-3.5 h-3.5 text-background" />
+        </div>
+      )}
 
       {/* Content */}
       <div className={cn(
-        'flex-1 max-w-3xl',
+        'flex-1 max-w-2xl',
         isUser ? 'text-right' : ''
       )}>
         <div className={cn(
-          'inline-block rounded-2xl px-4 py-3',
+          'inline-block rounded-2xl px-4 py-2.5',
           isUser
-            ? 'bg-primary text-primary-foreground rounded-br-md'
-            : 'bg-muted text-foreground rounded-bl-md'
+            ? 'bg-foreground text-background'
+            : 'text-foreground'
         )}>
-          {/* Text content */}
-          {message.content && (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-              {message.content}
-            </p>
-          )}
+          <p className="whitespace-pre-wrap text-sm leading-relaxed">
+            {message.content}
+          </p>
         </div>
-
-        {/* Code block - outside the bubble for better display */}
-        {message.code && (
-          <div className={cn('mt-3', isUser ? 'text-left' : '')}>
-            <CodeBlock
-              code={message.code}
-              language={message.language || 'typescript'}
-            />
-          </div>
-        )}
-
-        {/* Confidence indicator */}
-        {message.confidence !== undefined && !isUser && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-1 w-16 bg-muted rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-foreground/30"
-                initial={{ width: 0 }}
-                animate={{ width: `${message.confidence * 100}%` }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              />
-            </div>
-            <span>{Math.round(message.confidence * 100)}% confidence</span>
-          </div>
-        )}
       </div>
     </motion.div>
   );
@@ -94,14 +63,10 @@ export function ChatArea({ messages, isLoading }: ChatAreaProps) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto py-4">
+      <div className="max-w-3xl mx-auto py-4">
         <AnimatePresence mode="popLayout">
-          {messages.map((message, index) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isLast={index === messages.length - 1}
-            />
+          {messages.map((message) => (
+            <ChatMessage key={message.id} message={message} />
           ))}
         </AnimatePresence>
 
@@ -109,16 +74,13 @@ export function ChatArea({ messages, isLoading }: ChatAreaProps) {
         <AnimatePresence>
           {isLoading && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex gap-3 px-4 py-4"
+              exit={{ opacity: 0, y: -8 }}
+              className="flex gap-3 px-4 py-3"
             >
-              <div className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center bg-muted text-muted-foreground">
-                <Bot className="w-4 h-4" />
-              </div>
               <div className="flex items-center">
-                <div className="rounded-2xl rounded-bl-md bg-muted px-4 py-3">
+                <div className="px-4 py-2.5">
                   <ThinkingDots />
                 </div>
               </div>

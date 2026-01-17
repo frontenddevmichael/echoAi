@@ -1,16 +1,35 @@
-import { useCallback, useRef } from 'react';
-import { AppProvider, useApp, AIMode, Message } from '@/context/AppContext';
+import { useCallback, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Code2, MessageSquare } from 'lucide-react';
+import { AppProvider, useApp } from '@/context/AppContext';
 import { AppHeader } from '@/components/app/AppHeader';
 import { ChatArea } from '@/components/app/ChatArea';
 import { ChatInput } from '@/components/app/ChatInput';
 import { EmptyState } from '@/components/app/EmptyState';
+import { CodeSandbox } from '@/components/app/CodeSandbox';
 import { useHaptics } from '@/hooks/useHaptics';
-import { streamChat, parseCodeBlocks } from '@/lib/ai';
+import { sendMessage } from '@/lib/ai';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 function AppContent() {
-  const { messages, addMessage, updateMessage, input, setInput, isLoading, setIsLoading, mode } = useApp();
+  const { 
+    messages, 
+    addMessage, 
+    updateMessage, 
+    input, 
+    setInput, 
+    isLoading, 
+    setIsLoading,
+    codeState,
+    setCodeState,
+    showSandbox,
+    setShowSandbox
+  } = useApp();
+  
   const { triggerSuccess, triggerError, triggerThinking, stop: stopHaptics } = useHaptics();
+  const [mobileView, setMobileView] = useState<'chat' | 'code'>('chat');
 
   const handleSubmit = useCallback(async () => {
     if (!input.trim()) return;
@@ -19,99 +38,154 @@ function AppContent() {
     addMessage({
       role: 'user',
       content: input,
-      mode,
-    });
-
-    // Create assistant message placeholder
-    const assistantId = addMessage({
-      role: 'assistant',
-      content: '',
-      mode,
     });
 
     setInput('');
     setIsLoading(true);
     triggerThinking(10000);
 
-    let fullContent = '';
+    try {
+      // Prepare conversation history
+      const conversationHistory = [
+        ...messages.map(m => ({ role: m.role, content: m.content })),
+        { role: 'user' as const, content: input }
+      ];
 
-    // Prepare conversation history for AI (exclude the empty assistant message)
-    const conversationHistory = [
-      ...messages.map(m => ({ role: m.role, content: m.content })),
-      { role: 'user' as const, content: input }
-    ];
+      // Send to AI with current code context
+      const response = await sendMessage({
+        messages: conversationHistory,
+        currentCode: codeState?.code,
+      });
 
-    await streamChat({
-      messages: conversationHistory,
-      mode,
-      onDelta: (chunk) => {
-        fullContent += chunk;
-        updateMessage(assistantId, { content: fullContent });
-      },
-      onDone: () => {
-        stopHaptics();
-        triggerSuccess();
-        setIsLoading(false);
+      stopHaptics();
+      triggerSuccess();
 
-        // Parse for code blocks
-        const { text, codeBlocks } = parseCodeBlocks(fullContent);
-        
-        if (codeBlocks.length > 0) {
-          updateMessage(assistantId, {
-            content: fullContent,
-            code: codeBlocks[0]?.code,
-            language: codeBlocks[0]?.language,
-            confidence: 0.85 + Math.random() * 0.15,
-          });
-        } else {
-          updateMessage(assistantId, {
-            content: fullContent,
-            confidence: 0.85 + Math.random() * 0.15,
-          });
-        }
-      },
-      onError: (error) => {
-        stopHaptics();
-        triggerError();
-        setIsLoading(false);
-        toast.error(error);
-        
-        updateMessage(assistantId, {
-          content: `⚠️ ${error}`,
+      // Add assistant response (chat only, no code in messages)
+      addMessage({
+        role: 'assistant',
+        content: response.chat,
+        intent: response.intent,
+      });
+
+      // If AI returned code, update sandbox
+      if (response.code) {
+        setCodeState({
+          code: response.code,
+          language: response.language || 'typescript',
+          filename: response.filename,
         });
-      },
-    });
-  }, [input, mode, messages, addMessage, updateMessage, setInput, setIsLoading, triggerSuccess, triggerError, triggerThinking, stopHaptics]);
+        setShowSandbox(true);
+        // On mobile, switch to code view when code is generated
+        if (window.innerWidth < 768) {
+          setMobileView('code');
+        }
+      }
+
+    } catch (error) {
+      stopHaptics();
+      triggerError();
+      const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
+      toast.error(errorMessage);
+      
+      addMessage({
+        role: 'assistant',
+        content: `I encountered an issue: ${errorMessage}`,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [input, messages, codeState, addMessage, setInput, setIsLoading, triggerSuccess, triggerError, triggerThinking, stopHaptics, setCodeState, setShowSandbox]);
 
   const handleExampleClick = useCallback((example: string) => {
     setInput(example);
   }, [setInput]);
 
-  const placeholders: Record<AIMode, string> = {
-    chat: 'Ask me anything...',
-    code_generation: 'Describe the code you need...',
-    code_modification: 'Paste your code and describe changes...',
-    code_explanation: 'Paste code to explain...',
-    debugging: 'Paste your error or describe the bug...',
-  };
+  const handleCodeChange = useCallback((newCode: string) => {
+    if (codeState) {
+      setCodeState({ ...codeState, code: newCode });
+    }
+  }, [codeState, setCodeState]);
+
+  const handleCloseSandbox = useCallback(() => {
+    setShowSandbox(false);
+    setMobileView('chat');
+  }, [setShowSandbox]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <AppHeader />
       
-      {messages.length === 0 ? (
-        <EmptyState mode={mode} onExampleClick={handleExampleClick} />
-      ) : (
-        <ChatArea messages={messages} isLoading={isLoading} />
+      {/* Mobile view toggle */}
+      {showSandbox && (
+        <div className="md:hidden flex border-b border-border">
+          <button
+            onClick={() => setMobileView('chat')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
+              mobileView === 'chat' 
+                ? 'text-foreground border-b-2 border-foreground' 
+                : 'text-muted-foreground'
+            )}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Chat
+          </button>
+          <button
+            onClick={() => setMobileView('code')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors',
+              mobileView === 'code' 
+                ? 'text-foreground border-b-2 border-foreground' 
+                : 'text-muted-foreground'
+            )}
+          >
+            <Code2 className="w-4 h-4" />
+            Code
+          </button>
+        </div>
       )}
       
-      <ChatInput
-        value={input}
-        onChange={setInput}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-        placeholder={placeholders[mode]}
-      />
+      {/* Main content area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chat container */}
+        <div className={cn(
+          'flex-1 flex flex-col min-w-0',
+          showSandbox && 'md:flex-[0.5]',
+          showSandbox && mobileView === 'code' && 'hidden md:flex'
+        )}>
+          {messages.length === 0 ? (
+            <EmptyState onExampleClick={handleExampleClick} />
+          ) : (
+            <ChatArea messages={messages} isLoading={isLoading} />
+          )}
+          
+          <ChatInput
+            value={input}
+            onChange={setInput}
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
+        </div>
+
+        {/* Code sandbox container */}
+        <div className={cn(
+          'flex-1 min-w-0',
+          !showSandbox && 'hidden',
+          showSandbox && 'md:flex-[0.5]',
+          showSandbox && mobileView === 'chat' && 'hidden md:block'
+        )}>
+          {codeState && (
+            <CodeSandbox
+              code={codeState.code}
+              language={codeState.language}
+              filename={codeState.filename}
+              onCodeChange={handleCodeChange}
+              onClose={handleCloseSandbox}
+              isVisible={showSandbox}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
