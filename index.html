@@ -1,26 +1,60 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Basic -->
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- TODO: Set the document title to the name of your application -->
-    <title>Lovable App</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <!-- TODO: Update og:title to match your application name -->
-    <meta property="og:title" content="Lovable App" />
-    <meta property="og:description" content="Lovable Generated Project" />
+    <!-- Primary SEO -->
+    <title>Echo — A Thoughtful AI Assistant for Conversation and Code</title>
+    <meta
+      name="description"
+      content="Echo is a calm, intent-aware AI assistant for conversation and code. It understands what you need, generates and edits code when required, and stays out of the way when it doesn’t."
+    />
+    <meta name="author" content="Echo" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://echoai.pxxl.click/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:title" content="Echo — A Thoughtful AI Assistant for Conversation and Code" />
+    <meta
+      property="og:description"
+      content="Echo understands intent. It knows when to talk, when to write code, and when to stay quiet. A focused AI assistant built for developers."
+    />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta property="og:url" content="https://echo.yourdomain.com/" />
+    <meta property="og:image" content="https://echo.yourdomain.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@Lovable" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <meta name="twitter:title" content="Echo — A Thoughtful AI Assistant for Conversation and Code" />
+    <meta
+      name="twitter:description"
+      content="A calm, intent-aware AI assistant that knows when to generate code and when to just talk."
+    />
+    <meta name="twitter:image" content="https://echo.yourdomain.com/og-image.png" />
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#000000" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Performance / UX -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- App -->
+    <script type="module" src="/src/main.tsx"></script>
   </head>
 
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
