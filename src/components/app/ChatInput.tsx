@@ -123,7 +123,6 @@ export default function ChatInput({
   // Click outside to close emoji picker and templates
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      // Check if click is outside emoji picker
       if (
         showEmojiPicker &&
         emojiPickerRef.current &&
@@ -134,7 +133,6 @@ export default function ChatInput({
         setShowEmojiPicker(false);
       }
 
-      // Check if click is outside templates
       if (
         showTemplates &&
         templatesRef.current &&
@@ -144,7 +142,6 @@ export default function ChatInput({
       }
     };
 
-    // Add event listeners for both mouse and touch
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
 
@@ -158,20 +155,16 @@ export default function ChatInput({
   const handleSubmit = useCallback(() => {
     if (!value.trim() || isLoading) return;
 
-    // ALWAYS notify parent about files before submitting
     if (uploadedFiles.length > 0) {
       if (onFileAttach) {
         onFileAttach(uploadedFiles.map((f) => f.file));
       } else {
-        // If no handler, log warning
         console.warn('Files attached but no onFileAttach handler provided');
       }
     }
 
-    // Call onSubmit to send the message
     onSubmit();
 
-    // Clear after submission
     setUploadedFiles([]);
     setVoiceSnippets([]);
   }, [value, isLoading, onSubmit, uploadedFiles, onFileAttach]);
@@ -233,7 +226,6 @@ export default function ChatInput({
         showToast(`${validFiles.length} file(s) attached`, 'success');
       }
 
-      // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -241,123 +233,171 @@ export default function ChatInput({
     [validateFile, showToast]
   );
 
-  // Voice recording with proper transcript handling
+  // Replace your toggleVoiceRecording function with this improved version:
+
   const toggleVoiceRecording = useCallback(() => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      showToast('Voice input not supported in this browser. Try Chrome or Edge.', 'error');
+      showToast('Voice input not supported. Try Chrome or Edge.', 'error');
       return;
     }
 
-    if (!recording) {
-      try {
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
-        recognition.maxAlternatives = 1;
-
-        recognition.onstart = () => {
-          console.log('🎤 Voice recognition started');
-          setRecording(true);
-          showToast('🎤 Listening... Speak now!', 'info');
-        };
-
-        recognition.onresult = (event: any) => {
-          console.log('📝 Voice recognition result received:', event);
-
-          if (event.results && event.results.length > 0) {
-            const result = event.results[0][0];
-            const transcript = result.transcript;
-            const confidence = result.confidence;
-
-            console.log('✅ Transcript:', transcript);
-            console.log('📊 Confidence:', confidence);
-
-            // Create snippet
-            const snippet: VoiceSnippet = {
-              text: transcript,
-              id: Date.now().toString(),
-              timestamp: Date.now(),
-            };
-
-            setVoiceSnippets((prev) => [...prev, snippet]);
-
-            // Insert transcript into textarea - IMPORTANT: This is what shows the text
-            const currentValue = textareaRef.current?.value || value;
-            const newValue = currentValue ? `${currentValue} ${transcript}` : transcript;
-            console.log('📝 New value:', newValue);
-            onChange(newValue);
-
-            // Notify parent if handler exists
-            if (onVoiceTranscript) {
-              onVoiceTranscript(transcript);
-            }
-
-            showToast(`✅ Voice input added: "${transcript.substring(0, 30)}..."`, 'success');
-
-            // Focus back on textarea
-            setTimeout(() => {
-              textareaRef.current?.focus();
-            }, 100);
-          } else {
-            console.warn('⚠️ No results in event');
-          }
-        };
-
-        recognition.onerror = (event: any) => {
-          console.error('❌ Voice recognition error:', event.error, event);
-          let errorMessage = 'Voice input error';
-
-          switch (event.error) {
-            case 'no-speech':
-              errorMessage = 'No speech detected. Please try again and speak clearly.';
-              break;
-            case 'audio-capture':
-              errorMessage = 'No microphone found. Please check your device settings.';
-              break;
-            case 'not-allowed':
-              errorMessage = 'Microphone permission denied. Please allow microphone access.';
-              break;
-            case 'network':
-              errorMessage = 'Network error occurred. Check your connection.';
-              break;
-            case 'aborted':
-              errorMessage = 'Voice input cancelled.';
-              break;
-            default:
-              errorMessage = `Voice input error: ${event.error}`;
-          }
-
-          showToast(errorMessage, 'error');
-          setRecording(false);
-        };
-
-        recognition.onend = () => {
-          console.log('🛑 Voice recognition ended');
-          setRecording(false);
-        };
-
-        console.log('🚀 Starting voice recognition...');
-        recognition.start();
-        recognitionRef.current = recognition;
-
-      } catch (error) {
-        console.error('💥 Failed to start voice recording:', error);
-        showToast('Failed to start voice recording. Please try again.', 'error');
-        setRecording(false);
-      }
-    } else {
+    if (recording) {
       console.log('⏹️ Stopping voice recognition...');
       if (recognitionRef.current) {
         recognitionRef.current.stop();
+        recognitionRef.current = null;
       }
       setRecording(false);
+      return;
     }
-  }, [recording, value, onChange, onVoiceTranscript, showToast]);
 
+    // Request microphone permission first
+    navigator.mediaDevices?.getUserMedia({ audio: true })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+
+        try {
+          const recognition = new SpeechRecognition();
+
+          // IMPORTANT: Configure for better timeout handling
+          recognition.continuous = true; // ✅ Keep listening
+          recognition.interimResults = true; // ✅ Show partial results
+          recognition.lang = 'en-US';
+          recognition.maxAlternatives = 1;
+
+          let finalTranscript = '';
+          let silenceTimer: NodeJS.Timeout | null = null;
+
+          recognition.onstart = () => {
+            console.log('🎤 Voice recognition started');
+            setRecording(true);
+            showToast('🎤 Listening... (Click mic again to stop)', 'info');
+          };
+
+          recognition.onresult = (event: any) => {
+            console.log('📝 Voice recognition result:', event);
+
+            let interimTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              const transcript = event.results[i][0].transcript;
+
+              if (event.results[i].isFinal) {
+                finalTranscript += transcript + ' ';
+                console.log('✅ Final transcript:', transcript);
+              } else {
+                interimTranscript += transcript;
+                console.log('📝 Interim transcript:', transcript);
+              }
+            }
+
+            // Clear any existing silence timer
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+            }
+
+            // Set new silence timer - stop after 2 seconds of silence
+            silenceTimer = setTimeout(() => {
+              if (finalTranscript.trim()) {
+                console.log('✅ Final transcript after silence:', finalTranscript);
+
+                const snippet: VoiceSnippet = {
+                  text: finalTranscript.trim(),
+                  id: Date.now().toString(),
+                  timestamp: Date.now(),
+                };
+
+                setVoiceSnippets((prev) => [...prev, snippet]);
+
+                const currentValue = textareaRef.current?.value || value;
+                const newValue = currentValue
+                  ? `${currentValue} ${finalTranscript.trim()}`
+                  : finalTranscript.trim();
+                onChange(newValue);
+
+                if (onVoiceTranscript) {
+                  onVoiceTranscript(finalTranscript.trim());
+                }
+
+                showToast(`✅ "${finalTranscript.trim().substring(0, 30)}..."`, 'success');
+
+                setTimeout(() => {
+                  textareaRef.current?.focus();
+                }, 100);
+              }
+
+              // Stop recognition after silence
+              if (recognitionRef.current) {
+                recognitionRef.current.stop();
+              }
+            }, 2000); // Stop after 2 seconds of silence
+          };
+
+          recognition.onerror = (event: any) => {
+            console.error('❌ Voice error:', event.error);
+
+            // Ignore "no-speech" if user manually stopped
+            if (event.error === 'no-speech' && !recording) {
+              return;
+            }
+
+            let errorMessage = 'Voice input error';
+
+            switch (event.error) {
+              case 'no-speech':
+                errorMessage = '🔇 No speech detected. Click mic and speak immediately!';
+                break;
+              case 'audio-capture':
+                errorMessage = 'No microphone found. Check your device.';
+                break;
+              case 'not-allowed':
+                errorMessage = 'Microphone denied. Click 🔒 and allow mic access.';
+                break;
+              case 'network':
+                errorMessage = 'Network error. Check internet connection.';
+                break;
+              case 'aborted':
+                return; // Don't show error for manual stop
+              default:
+                errorMessage = `Voice error: ${event.error}`;
+            }
+
+            showToast(errorMessage, 'error');
+            setRecording(false);
+
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+            }
+          };
+
+          recognition.onend = () => {
+            console.log('🛑 Voice recognition ended');
+            setRecording(false);
+
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+            }
+          };
+
+          console.log('🚀 Starting voice recognition...');
+          recognition.start();
+          recognitionRef.current = recognition;
+
+        } catch (error) {
+          console.error('💥 Failed to start:', error);
+          showToast('Failed to start. Try again.', 'error');
+          setRecording(false);
+        }
+      })
+      .catch(err => {
+        console.error('❌ Mic permission denied:', err);
+        showToast('Microphone denied. Enable in browser settings.', 'error');
+      });
+
+  }, [recording, value, onChange, onVoiceTranscript, showToast]);
+  
   // Insert emoji
   const insertEmoji = useCallback(
     (emoji: string) => {
@@ -370,7 +410,6 @@ export default function ChatInput({
 
       onChange(newValue);
 
-      // Focus and set cursor position
       requestAnimationFrame(() => {
         textarea.focus();
         const newCursorPos = start + emoji.length;
@@ -572,7 +611,6 @@ export default function ChatInput({
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border w-80 max-h-96 overflow-hidden flex flex-col"
                   >
-                    {/* Header with close button */}
                     <div className="flex items-center justify-between px-3 py-2 border-b">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Emojis
@@ -586,7 +624,6 @@ export default function ChatInput({
                       </button>
                     </div>
 
-                    {/* Category tabs */}
                     <div className="flex gap-1 p-2 border-b overflow-x-auto">
                       {Object.keys(EMOJI_CATEGORIES).map((category) => (
                         <button
@@ -604,7 +641,6 @@ export default function ChatInput({
                       ))}
                     </div>
 
-                    {/* Emoji grid */}
                     <div className="p-3 overflow-y-auto grid grid-cols-8 gap-1">
                       {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES].map((emoji) => (
                         <button
@@ -651,7 +687,6 @@ export default function ChatInput({
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     className="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border min-w-[200px] overflow-hidden"
                   >
-                    {/* Header with close button */}
                     <div className="flex items-center justify-between px-3 py-2 border-b">
                       <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Templates
@@ -665,7 +700,6 @@ export default function ChatInput({
                       </button>
                     </div>
 
-                    {/* Template list */}
                     <div className="p-2">
                       {templates.map((template) => (
                         <button
