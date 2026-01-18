@@ -47,7 +47,7 @@ export function ChatArea({ messages, isLoading, onSuggestedPrompt }: ChatAreaPro
       ref={containerRef}
       className="overflow-y-auto py-4 scroll-smooth"
       style={{
-        width: "80%",
+        width: "90%",
         margin: "auto",
         height: height
       }}
