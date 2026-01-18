@@ -126,7 +126,7 @@ export function PWASection() {
 
             <Button variant="hero" onClick={() => {
             triggerMedium();
-            window.location.href = '/app';
+            window.location.href = '/install';
           }}>
               <Smartphone className="w-4 h-4 mr-2" />
               Try Echo Now
