@@ -2,58 +2,78 @@
 <html lang="en">
 
 <head>
-  <!-- Basic -->
+  <!-- =========================
+         Core Meta
+    ========================== -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-  <!-- Primary SEO -->
+  <!-- =========================
+         Primary SEO
+    ========================== -->
   <title>Echo — A Thoughtful AI Assistant for Conversation and Code</title>
   <meta name="description"
-    content="Echo is a calm, intent-aware AI assistant for conversation and code. It understands what you need, generates and edits code when required, and stays out of the way when it doesn’t." />
+    content="Echo is a calm, intent-aware AI assistant for conversation and code. It understands when to talk, when to write code, and when to stay out of the way." />
   <meta name="author" content="Echo" />
   <meta name="robots" content="index, follow" />
 
-  <!-- Canonical -->
+  <!-- =========================
+         Canonical
+    ========================== -->
   <link rel="canonical" href="https://echoai.pxxl.click/" />
 
-  <!-- Open Graph / Facebook -->
+  <!-- =========================
+         Open Graph (Facebook, LinkedIn, etc.)
+    ========================== -->
   <meta property="og:title" content="Echo — A Thoughtful AI Assistant for Conversation and Code" />
   <meta property="og:description"
-    content="Echo understands intent. It knows when to talk, when to write code, and when to stay quiet. A focused AI assistant built for developers." />
+    content="Echo understands intent. It knows when to generate code, when to explain, and when to stay quiet." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://echo.yourdomain.com/" />
-  <meta property="og:image" content="https://echo.yourdomain.com/og-image.png" />
+  <meta property="og:url" content="https://echoai.pxxl.click/" />
+  <meta property="og:image" content="https://echoai.pxxl.click/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
-  <!-- Twitter / X -->
+  <!-- =========================
+         Twitter / X
+    ========================== -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Echo — A Thoughtful AI Assistant for Conversation and Code" />
-  <meta name="twitter:description"
-    content="A calm, intent-aware AI assistant that knows when to generate code and when to just talk." />
-  <meta name="twitter:image" content="https://echo.yourdomain.com/og-image.png" />
+  <meta name="twitter:description" content="A calm, intent-aware AI assistant built for conversation and code." />
+  <meta name="twitter:image" content="https://echoai.pxxl.click/og-image.png" />
 
-  <!-- Icons & PWA -->
-  <link rel="icon" type="image/x-icon" href="public/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" sizes="32x32" href="public/apple-touch-icon.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="public/pwa-512x512.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="public/pwa-512x512.png" />
+  <!-- =========================
+         Icons & PWA
+    ========================== -->
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/pwa-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
   <meta name="theme-color" content="#000000" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- Performance / UX -->
+  <!-- =========================
+         Performance Optimizations
+    ========================== -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- App -->
+  <!-- =========================
+         App Entry (Vite)
+    ========================== -->
   <script type="module" src="/src/main.tsx"></script>
 </head>
 
 <body>
   <div id="root"></div>
+
+  <!-- Fallback for no-JS (optional but clean) -->
+  <noscript>
+    <strong>Echo requires JavaScript to function properly.</strong>
+  </noscript>
 </body>
 
 </html>
