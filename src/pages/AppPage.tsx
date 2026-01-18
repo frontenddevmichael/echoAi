@@ -4,7 +4,7 @@ import { Code2, MessageSquare } from 'lucide-react';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { AppHeader } from '@/components/app/AppHeader';
 import { ChatArea } from '@/components/app/ChatArea';
-import { ChatInput } from '@/components/app/ChatInput';
+import ChatInput from '@/components/app/ChatInput';
 import { EmptyState } from '@/components/app/EmptyState';
 import { CodeSandbox } from '@/components/app/CodeSandbox';
 import { useHaptics } from '@/hooks/useHaptics';
