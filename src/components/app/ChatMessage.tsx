@@ -142,8 +142,9 @@ export function ChatMessage({
                                 p: ({ children }) => (
                                     <p className="mb-2 last:mb-0">{children}</p>
                                 ),
-                                code: ({ inline, children, ...props }) =>
-                                    inline ? (
+                                code: ({ className, children, ...props }) => {
+                                    const isInline = !className?.includes('language-');
+                                    return isInline ? (
                                         <code
                                             className={cn(
                                                 "px-1.5 py-0.5 rounded text-xs font-mono",
@@ -166,7 +167,8 @@ export function ChatMessage({
                                         >
                                             <code className="text-xs font-mono">{children}</code>
                                         </pre>
-                                    ),
+                                    );
+                                },
                                 ul: ({ children }) => (
                                     <ul className="list-disc list-inside mb-2 space-y-1">
                                         {children}
