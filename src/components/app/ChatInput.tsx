@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
-import { Send, Square, Paperclip, Smile, Mic, Zap, X, FileText, ImageIcon, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Square, Paperclip, Smile, Mic, Zap, X, FileText, ImageIcon, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -8,22 +8,18 @@ import { cn } from '@/lib/utils';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES = 5;
 const ALLOWED_FILE_TYPES = ['image/*', 'application/pdf', '.txt', '.doc', '.docx'];
-const DRAG_THRESHOLD = 60;
-const DRAG_CONSTRAINT = 80;
 const MAX_TEXTAREA_HEIGHT = 160;
+const MIN_TEXTAREA_HEIGHT = 44;
 
-// Comprehensive emoji dataset organized by category
+// Simplified emoji set for mobile performance
+const EMOJI_QUICK = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '✨', '💡', '🚀', '💯', '🤔', '👀'];
+
 const EMOJI_CATEGORIES = {
-  'Smileys': ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '🥲', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😶‍🌫️', '🥴', '😵', '🤯', '🤠', '🥳', '🥸', '😎', '🤓', '🧐'],
-  'Gestures': ['👋', '🤚', '🖐', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶'],
-  'People': ['👶', '👧', '🧒', '👦', '👩', '🧑', '👨', '👩‍🦱', '🧑‍🦱', '👨‍🦱', '👩‍🦰', '🧑‍🦰', '👨‍🦰', '👱‍♀️', '👱', '👱‍♂️', '👩‍🦳', '🧑‍🦳', '👨‍🦳', '👩‍🦲', '🧑‍🦲', '👨‍🦲', '🧔', '👵', '🧓', '👴', '👲', '👳‍♀️', '👳', '👳‍♂️', '🧕', '👮‍♀️', '👮', '👮‍♂️', '👷‍♀️', '👷', '👷‍♂️'],
-  'Hearts': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟'],
-  'Nature': ['🌸', '💮', '🏵', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃', '🍄', '🌰', '🦀', '🦞', '🦐', '🦑', '🐙', '🦪', '🐚', '🐌', '🦋', '🐛', '🐝', '🐞', '🦗', '🕷', '🦂', '🦟', '🦠'],
-  'Food': ['🍎', '🍏', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🍆', '🥑', '🥦', '🥬', '🥒', '🌶', '🫑', '🌽', '🥕', '🫒', '🧄', '🧅', '🥔', '🍠', '🥐', '🥯', '🍞', '🥖', '🥨', '🧀', '🥚', '🍳', '🧈', '🥞', '🧇', '🥓', '🥩', '🍗', '🍖', '🦴', '🌭', '🍔', '🍟', '🍕', '🫓', '🥪', '🥙', '🧆', '🌮', '🌯', '🫔', '🥗', '🥘', '🫕', '🥫', '🍝', '🍜', '🍲', '🍛', '🍣', '🍱', '🥟', '🦪', '🍤', '🍙', '🍚', '🍘', '🍥', '🥠', '🥮', '🍢', '🍡', '🍧', '🍨', '🍦', '🥧', '🧁', '🍰', '🎂', '🍮', '🍭', '🍬', '🍫', '🍿', '🍩', '🍪', '🌰', '🥜', '🍯'],
-  'Activities': ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸', '🥌', '🎿', '⛷', '🏂', '🪂', '🏋️‍♀️', '🏋️', '🏋️‍♂️', '🤼‍♀️', '🤼', '🤼‍♂️', '🤸‍♀️', '🤸', '🤸‍♂️', '⛹️‍♀️', '⛹️', '⛹️‍♂️', '🤺', '🤾‍♀️', '🤾', '🤾‍♂️', '🏌️‍♀️', '🏌️', '🏌️‍♂️', '🏇', '🧘‍♀️', '🧘', '🧘‍♂️', '🏄‍♀️', '🏄', '🏄‍♂️', '🏊‍♀️', '🏊', '🏊‍♂️', '🤽‍♀️', '🤽', '🤽‍♂️', '🚣‍♀️', '🚣', '🚣‍♂️', '🧗‍♀️', '🧗', '🧗‍♂️', '🚵‍♀️', '🚵', '🚵‍♂️', '🚴‍♀️', '🚴', '🚴‍♂️'],
-  'Travel': ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🦯', '🦽', '🦼', '🛴', '🚲', '🛵', '🏍', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩', '💺', '🛰', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥', '🛳', '⛴', '🚢', '⚓', '⛽', '🚧'],
-  'Objects': ['⌚', '📱', '📲', '💻', '⌨️', '🖥', '🖨', '🖱', '🖲', '🕹', '🗜', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽', '🎞', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙', '🎚', '🎛', '🧭', '⏱', '⏲', '⏰', '🕰', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯', '🪔', '🧯', '🛢', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '💎', '⚖️', '🪜', '🧰', '🪛', '🔧', '🔨', '⚒', '🛠', '⛏', '🪚', '🔩', '⚙️', '🪤', '🧱', '⛓', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡', '⚔️', '🛡', '🚬', '⚰️', '🪦', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡', '🧹', '🪠', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪥', '🪒', '🧽', '🪣', '🧴', '🛎', '🔑', '🗝', '🚪', '🪑', '🛋', '🛏', '🛌', '🧸', '🪆', '🖼', '🪞', '🪟', '🛍', '🛒', '🎁', '🎈', '🎏', '🎀', '🪄', '🪅', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧'],
-  'Symbols': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🛗', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '⚧', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸', '⏯', '⏹', '⏺', '⏭', '⏮', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '✖️', '♾', '💲', '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜', '✔️', '☑️', '🔘', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁‍🗨', '💬', '💭', '🗯', '♠️', '♣️', '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧'],
+  'Recent': EMOJI_QUICK,
+  'Smileys': ['😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '🤔', '🤨', '😐', '🙄', '😬', '😌', '😴', '🤯', '😎', '🤓', '🥳'],
+  'Gestures': ['👋', '👌', '✌️', '🤞', '🤟', '🤘', '👍', '👎', '👏', '🙌', '🤝', '🙏', '💪'],
+  'Hearts': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💕', '💗', '💖', '💘', '💝'],
+  'Objects': ['💡', '🔥', '✨', '⭐', '🎉', '🎊', '🚀', '💻', '📱', '⚡', '💯', '✅', '❌'],
 };
 
 interface ChatInputProps {
@@ -44,57 +40,45 @@ interface UploadedFile {
   file: File;
 }
 
-interface VoiceSnippet {
-  text: string;
-  id: string;
-  timestamp: number;
-}
-
-interface ToastMessage {
-  id: string;
-  message: string;
-  type: 'error' | 'success' | 'info';
-}
-
 export default function ChatInput({
   value,
   onChange,
   onSubmit,
   isLoading,
   onFileAttach,
-  onVoiceTranscript,
   maxLength = 4000,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const templatesRef = useRef<HTMLDivElement>(null);
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
-  const [voiceSnippets, setVoiceSnippets] = useState<VoiceSnippet[]>([]);
   const [recording, setRecording] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('Smileys');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Recent');
+  const [isToolbarExpanded, setIsToolbarExpanded] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const templates = useMemo(
-    () => ['Summarize the above', 'Translate to English', 'Give me key points', 'Explain like I\'m 5'],
+    () => ['Summarize the above', 'Translate to English', 'Explain like I\'m 5', 'Give me key points'],
     []
   );
 
-  const x = useMotionValue(0);
-  const opacity = useTransform(x, [0, DRAG_CONSTRAINT], [1, 0.6]);
+  // Detect virtual keyboard
+  useEffect(() => {
+    const handleResize = () => {
+      const viewport = window.visualViewport;
+      if (viewport) {
+        const heightDiff = window.innerHeight - viewport.height;
+        setKeyboardVisible(heightDiff > 150);
+      }
+    };
 
-  // Toast notification system
-  const showToast = useCallback((message: string, type: ToastMessage['type'] = 'info') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 3000);
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
   }, []);
 
   // Auto-resize textarea
@@ -102,48 +86,26 @@ export default function ChatInput({
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+      const newHeight = Math.min(Math.max(textarea.scrollHeight, MIN_TEXTAREA_HEIGHT), MAX_TEXTAREA_HEIGHT);
+      textarea.style.height = `${newHeight}px`;
     }
   }, [value]);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {
-          console.error('Error aborting recognition:', e);
-        }
-        recognitionRef.current = null;
-      }
-    };
-  }, []);
-
-  // Click outside to close emoji picker and templates
+  // Click outside to close popovers
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
-      if (
-        showEmojiPicker &&
-        emojiPickerRef.current &&
-        !emojiPickerRef.current.contains(event.target as Node) &&
-        emojiButtonRef.current &&
-        !emojiButtonRef.current.contains(event.target as Node)
-      ) {
+      const target = event.target as Node;
+      
+      if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(target)) {
         setShowEmojiPicker(false);
       }
-
-      if (
-        showTemplates &&
-        templatesRef.current &&
-        !templatesRef.current.contains(event.target as Node)
-      ) {
+      if (showTemplates && templatesRef.current && !templatesRef.current.contains(target)) {
         setShowTemplates(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -155,18 +117,15 @@ export default function ChatInput({
   const handleSubmit = useCallback(() => {
     if (!value.trim() || isLoading) return;
 
-    if (uploadedFiles.length > 0) {
-      if (onFileAttach) {
-        onFileAttach(uploadedFiles.map((f) => f.file));
-      } else {
-        console.warn('Files attached but no onFileAttach handler provided');
-      }
+    if (uploadedFiles.length > 0 && onFileAttach) {
+      onFileAttach(uploadedFiles.map((f) => f.file));
     }
 
     onSubmit();
-
     setUploadedFiles([]);
-    setVoiceSnippets([]);
+    setShowEmojiPicker(false);
+    setShowTemplates(false);
+    setIsToolbarExpanded(false);
   }, [value, isLoading, onSubmit, uploadedFiles, onFileAttach]);
 
   // Keyboard handler
@@ -184,230 +143,84 @@ export default function ChatInput({
     [handleSubmit]
   );
 
-  // File validation
-  const validateFile = useCallback(
-    (file: File): string | null => {
-      if (uploadedFiles.length >= MAX_FILES) {
-        return `Maximum ${MAX_FILES} files allowed`;
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return `File ${file.name} exceeds 10MB limit`;
-      }
-      return null;
-    },
-    [uploadedFiles.length]
-  );
-
-  // Handle file upload
+  // File validation and upload
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const files = Array.from(e.target.files || []);
       const validFiles: UploadedFile[] = [];
 
       for (const file of files) {
-        const error = validateFile(file);
-        if (error) {
-          showToast(error, 'error');
-          continue;
-        }
+        if (uploadedFiles.length + validFiles.length >= MAX_FILES) break;
+        if (file.size > MAX_FILE_SIZE) continue;
 
-        const uploadedFile: UploadedFile = {
+        validFiles.push({
           name: file.name,
           id: `${Date.now()}-${Math.random()}`,
           size: file.size,
           type: file.type,
           file,
-        };
-        validFiles.push(uploadedFile);
+        });
       }
 
       if (validFiles.length > 0) {
         setUploadedFiles((prev) => [...prev, ...validFiles]);
-        showToast(`${validFiles.length} file(s) attached`, 'success');
       }
 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     },
-    [validateFile, showToast]
+    [uploadedFiles.length]
   );
 
-  // Replace your toggleVoiceRecording function with this improved version:
-
+  // Voice recording (simplified for reliability)
   const toggleVoiceRecording = useCallback(() => {
     const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
 
     if (!SpeechRecognition) {
-      showToast('Voice input not supported. Try Chrome or Edge.', 'error');
+      alert('Voice input not supported in this browser');
       return;
     }
 
     if (recording) {
-      console.log('⏹️ Stopping voice recognition...');
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
-      }
       setRecording(false);
       return;
     }
 
-    // Request microphone permission first
-    navigator.mediaDevices?.getUserMedia({ audio: true })
-      .then(stream => {
-        stream.getTracks().forEach(track => track.stop());
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-        try {
-          const recognition = new SpeechRecognition();
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        onChange(value ? `${value} ${transcript}` : transcript);
+        textareaRef.current?.focus();
+      };
 
-          // IMPORTANT: Configure for better timeout handling
-          recognition.continuous = true; // ✅ Keep listening
-          recognition.interimResults = true; // ✅ Show partial results
-          recognition.lang = 'en-US';
-          recognition.maxAlternatives = 1;
+      recognition.onerror = () => setRecording(false);
+      recognition.onend = () => setRecording(false);
 
-          let finalTranscript = '';
-          let silenceTimer: NodeJS.Timeout | null = null;
+      recognition.start();
+      setRecording(true);
+    } catch {
+      setRecording(false);
+    }
+  }, [recording, value, onChange]);
 
-          recognition.onstart = () => {
-            console.log('🎤 Voice recognition started');
-            setRecording(true);
-            showToast('🎤 Listening... (Click mic again to stop)', 'info');
-          };
-
-          recognition.onresult = (event: any) => {
-            console.log('📝 Voice recognition result:', event);
-
-            let interimTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-
-              if (event.results[i].isFinal) {
-                finalTranscript += transcript + ' ';
-                console.log('✅ Final transcript:', transcript);
-              } else {
-                interimTranscript += transcript;
-                console.log('📝 Interim transcript:', transcript);
-              }
-            }
-
-            // Clear any existing silence timer
-            if (silenceTimer) {
-              clearTimeout(silenceTimer);
-            }
-
-            // Set new silence timer - stop after 2 seconds of silence
-            silenceTimer = setTimeout(() => {
-              if (finalTranscript.trim()) {
-                console.log('✅ Final transcript after silence:', finalTranscript);
-
-                const snippet: VoiceSnippet = {
-                  text: finalTranscript.trim(),
-                  id: Date.now().toString(),
-                  timestamp: Date.now(),
-                };
-
-                setVoiceSnippets((prev) => [...prev, snippet]);
-
-                const currentValue = textareaRef.current?.value || value;
-                const newValue = currentValue
-                  ? `${currentValue} ${finalTranscript.trim()}`
-                  : finalTranscript.trim();
-                onChange(newValue);
-
-                if (onVoiceTranscript) {
-                  onVoiceTranscript(finalTranscript.trim());
-                }
-
-                showToast(`✅ "${finalTranscript.trim().substring(0, 30)}..."`, 'success');
-
-                setTimeout(() => {
-                  textareaRef.current?.focus();
-                }, 100);
-              }
-
-              // Stop recognition after silence
-              if (recognitionRef.current) {
-                recognitionRef.current.stop();
-              }
-            }, 2000); // Stop after 2 seconds of silence
-          };
-
-          recognition.onerror = (event: any) => {
-            console.error('❌ Voice error:', event.error);
-
-            // Ignore "no-speech" if user manually stopped
-            if (event.error === 'no-speech' && !recording) {
-              return;
-            }
-
-            let errorMessage = 'Voice input error';
-
-            switch (event.error) {
-              case 'no-speech':
-                errorMessage = '🔇 No speech detected. Click mic and speak immediately!';
-                break;
-              case 'audio-capture':
-                errorMessage = 'No microphone found. Check your device.';
-                break;
-              case 'not-allowed':
-                errorMessage = 'Microphone denied. Click 🔒 and allow mic access.';
-                break;
-              case 'network':
-                errorMessage = 'Network error. Check internet connection.';
-                break;
-              case 'aborted':
-                return; // Don't show error for manual stop
-              default:
-                errorMessage = `Voice error: ${event.error}`;
-            }
-
-            showToast(errorMessage, 'error');
-            setRecording(false);
-
-            if (silenceTimer) {
-              clearTimeout(silenceTimer);
-            }
-          };
-
-          recognition.onend = () => {
-            console.log('🛑 Voice recognition ended');
-            setRecording(false);
-
-            if (silenceTimer) {
-              clearTimeout(silenceTimer);
-            }
-          };
-
-          console.log('🚀 Starting voice recognition...');
-          recognition.start();
-          recognitionRef.current = recognition;
-
-        } catch (error) {
-          console.error('💥 Failed to start:', error);
-          showToast('Failed to start. Try again.', 'error');
-          setRecording(false);
-        }
-      })
-      .catch(err => {
-        console.error('❌ Mic permission denied:', err);
-        showToast('Microphone denied. Enable in browser settings.', 'error');
-      });
-
-  }, [recording, value, onChange, onVoiceTranscript, showToast]);
-  
   // Insert emoji
   const insertEmoji = useCallback(
     (emoji: string) => {
       const textarea = textareaRef.current;
-      if (!textarea) return;
+      if (!textarea) {
+        onChange(value + emoji);
+        return;
+      }
 
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const newValue = value.slice(0, start) + emoji + value.slice(end);
-
       onChange(newValue);
 
       requestAnimationFrame(() => {
@@ -429,13 +242,9 @@ export default function ChatInput({
     [value, onChange]
   );
 
-  // Remove handlers
+  // Remove file
   const removeFile = useCallback((id: string) => {
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
-  }, []);
-
-  const removeVoice = useCallback((id: string) => {
-    setVoiceSnippets((prev) => prev.filter((v) => v.id !== id));
   }, []);
 
   // Format file size
@@ -447,129 +256,91 @@ export default function ChatInput({
 
   const remainingChars = maxLength - value.length;
   const isNearLimit = remainingChars < 100;
+  const canSend = value.trim().length > 0 && !isLoading;
 
   return (
-    <>
-      {/* Toast notifications */}
-      <div className="fixed top-4 right-4 z-50 space-y-2">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 100 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg text-sm font-medium',
-                toast.type === 'error' && 'bg-red-500 text-white',
-                toast.type === 'success' && 'bg-green-500 text-white',
-                toast.type === 'info' && 'bg-blue-500 text-white'
-              )}
-            >
-              {toast.type === 'error' && <AlertCircle className="w-4 h-4" />}
-              {toast.message}
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-
-      <div className="sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent px-4 py-4 z-40">
-        <motion.div
-          className="flex flex-col gap-2 rounded-2xl border bg-background p-2 transition-all duration-300 focus-within:border-blue-500 focus-within:shadow-lg focus-within:shadow-blue-500/20"
-          style={{ x, opacity }}
-          drag="x"
-          dragConstraints={{ left: 0, right: DRAG_CONSTRAINT }}
-          dragElastic={0.3}
-          onDragEnd={(_, info) => {
-            if (info.point.x > DRAG_THRESHOLD && value.trim()) {
-              handleSubmit();
-            }
-          }}
-        >
+    <div 
+      ref={containerRef}
+      className="w-full bg-background safe-area-bottom"
+    >
+      <div className="px-3 sm:px-4 py-2 sm:py-3">
+        <div className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-2 sm:p-3 shadow-sm transition-shadow focus-within:shadow-md focus-within:border-foreground/20">
+          
           {/* File attachments */}
-          {uploadedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-2">
-              <AnimatePresence>
+          <AnimatePresence>
+            {uploadedFiles.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="flex flex-wrap gap-2 px-1"
+              >
                 {uploadedFiles.map((file) => (
                   <motion.div
                     key={file.id}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-xs border border-blue-200 dark:border-blue-800"
+                    className="flex items-center gap-1.5 px-2 py-1 bg-muted rounded-lg text-xs max-w-[140px] sm:max-w-[200px]"
                   >
                     {file.type.startsWith('image/') ? (
-                      <ImageIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <ImageIcon className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
                     ) : (
-                      <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <FileText className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
                     )}
-                    <div className="flex flex-col">
-                      <span className="font-medium text-blue-900 dark:text-blue-100">{file.name}</span>
-                      <span className="text-blue-600 dark:text-blue-400">{formatFileSize(file.size)}</span>
-                    </div>
+                    <span className="truncate text-foreground">{file.name}</span>
                     <button
                       onClick={() => removeFile(file.id)}
-                      className="ml-1 p-0.5 hover:bg-blue-200 dark:hover:bg-blue-900 rounded transition-colors"
+                      className="p-0.5 hover:bg-muted-foreground/20 rounded flex-shrink-0 touch-manipulation"
                       aria-label={`Remove ${file.name}`}
                     >
-                      <X className="w-3.5 h-3.5 text-blue-700 dark:text-blue-300" />
+                      <X className="w-3 h-3" />
                     </button>
                   </motion.div>
                 ))}
-              </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Main input row */}
+          <div className="flex items-end gap-1.5 sm:gap-2">
+            {/* Mobile toolbar toggle */}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setIsToolbarExpanded(!isToolbarExpanded)}
+              className="h-10 w-10 sm:hidden flex-shrink-0 touch-manipulation"
+              aria-label="Toggle toolbar"
+            >
+              <ChevronUp className={cn("w-5 h-5 transition-transform", isToolbarExpanded && "rotate-180")} />
+            </Button>
+
+            {/* Textarea */}
+            <div className="flex-1 min-w-0">
+              <textarea
+                ref={textareaRef}
+                value={value}
+                onChange={(e) => {
+                  if (e.target.value.length <= maxLength) {
+                    onChange(e.target.value);
+                  }
+                }}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask me anything..."
+                rows={1}
+                maxLength={maxLength}
+                className={cn(
+                  "w-full resize-none bg-transparent text-sm sm:text-base leading-relaxed",
+                  "placeholder:text-muted-foreground/50 focus:outline-none",
+                  "py-2.5 px-1 min-h-[44px]"
+                )}
+                style={{ maxHeight: `${MAX_TEXTAREA_HEIGHT}px` }}
+                aria-label="Message input"
+              />
             </div>
-          )}
 
-          {/* Voice snippets */}
-          {voiceSnippets.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-2">
-              <AnimatePresence>
-                {voiceSnippets.map((snippet) => (
-                  <motion.div
-                    key={snippet.id}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-xs border border-purple-200 dark:border-purple-800"
-                  >
-                    <Mic className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    <span className="text-purple-900 dark:text-purple-100 max-w-[200px] truncate">
-                      {snippet.text}
-                    </span>
-                    <button
-                      onClick={() => removeVoice(snippet.id)}
-                      className="ml-1 p-0.5 hover:bg-purple-200 dark:hover:bg-purple-900 rounded transition-colors"
-                      aria-label="Remove voice snippet"
-                    >
-                      <X className="w-3.5 h-3.5 text-purple-700 dark:text-purple-300" />
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-
-          {/* Main input area */}
-          <div className="flex items-end gap-2">
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => {
-                if (e.target.value.length <= maxLength) {
-                  onChange(e.target.value);
-                }
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask me anything..."
-              rows={1}
-              maxLength={maxLength}
-              className="flex-1 w-full resize-none border-0 bg-transparent py-2.5 px-3 text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-0 min-h-[40px]"
-              aria-label="Chat message input"
-              style={{ maxHeight: `${MAX_TEXTAREA_HEIGHT}px` }}
-            />
-
-            {/* Toolbar */}
-            <div className="flex gap-1 items-center pb-1">
+            {/* Desktop toolbar */}
+            <div className="hidden sm:flex items-center gap-1">
               {/* File upload */}
               <input
                 ref={fileInputRef}
@@ -578,15 +349,14 @@ export default function ChatInput({
                 accept={ALLOWED_FILE_TYPES.join(',')}
                 onChange={handleFileSelect}
                 className="hidden"
-                aria-label="Upload files"
               />
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadedFiles.length >= MAX_FILES}
+                className="h-9 w-9"
                 aria-label="Attach files"
-                className="h-8 w-8"
               >
                 <Paperclip className="w-4 h-4" />
               </Button>
@@ -594,67 +364,57 @@ export default function ChatInput({
               {/* Emoji picker */}
               <div className="relative">
                 <Button
-                  ref={emojiButtonRef}
                   size="icon"
                   variant="ghost"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  onClick={() => {
+                    setShowEmojiPicker(!showEmojiPicker);
+                    setShowTemplates(false);
+                  }}
+                  className="h-9 w-9"
                   aria-label="Insert emoji"
-                  className="h-8 w-8"
                 >
                   <Smile className="w-4 h-4" />
                 </Button>
-                {showEmojiPicker && (
-                  <motion.div
-                    ref={emojiPickerRef}
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border w-80 max-h-96 overflow-hidden flex flex-col"
-                  >
-                    <div className="flex items-center justify-between px-3 py-2 border-b">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Emojis
-                      </span>
-                      <button
-                        onClick={() => setShowEmojiPicker(false)}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                        aria-label="Close emoji picker"
-                      >
-                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    </div>
-
-                    <div className="flex gap-1 p-2 border-b overflow-x-auto">
-                      {Object.keys(EMOJI_CATEGORIES).map((category) => (
-                        <button
-                          key={category}
-                          onClick={() => setSelectedCategory(category)}
-                          className={cn(
-                            'px-3 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
-                            selectedCategory === category
-                              ? 'bg-blue-500 text-white'
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                          )}
-                        >
-                          {category}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="p-3 overflow-y-auto grid grid-cols-8 gap-1">
-                      {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES].map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => insertEmoji(emoji)}
-                          className="text-2xl hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-1 transition-colors"
-                          aria-label={`Insert ${emoji}`}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+                
+                <AnimatePresence>
+                  {showEmojiPicker && (
+                    <motion.div
+                      ref={emojiPickerRef}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full mb-2 right-0 bg-popover border border-border rounded-xl shadow-lg w-72 max-h-80 overflow-hidden z-50"
+                    >
+                      <div className="flex gap-1 p-2 border-b border-border overflow-x-auto scrollbar-hide">
+                        {Object.keys(EMOJI_CATEGORIES).map((category) => (
+                          <button
+                            key={category}
+                            onClick={() => setSelectedCategory(category)}
+                            className={cn(
+                              'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
+                              selectedCategory === category
+                                ? 'bg-primary text-primary-foreground'
+                                : 'hover:bg-muted'
+                            )}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="p-2 overflow-y-auto max-h-48 grid grid-cols-8 gap-1">
+                        {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onClick={() => insertEmoji(emoji)}
+                            className="text-xl hover:bg-muted rounded p-1.5 transition-colors"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Voice input */}
@@ -662,10 +422,10 @@ export default function ChatInput({
                 size="icon"
                 variant="ghost"
                 onClick={toggleVoiceRecording}
-                className={cn('h-8 w-8', recording && 'bg-red-500/10 animate-pulse')}
+                className={cn('h-9 w-9', recording && 'bg-destructive/10 text-destructive')}
                 aria-label={recording ? 'Stop recording' : 'Start voice input'}
               >
-                <Mic className={cn('w-4 h-4', recording && 'text-red-500')} />
+                <Mic className={cn('w-4 h-4', recording && 'animate-pulse')} />
               </Button>
 
               {/* Templates */}
@@ -673,39 +433,185 @@ export default function ChatInput({
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => setShowTemplates(!showTemplates)}
+                  onClick={() => {
+                    setShowTemplates(!showTemplates);
+                    setShowEmojiPicker(false);
+                  }}
+                  className="h-9 w-9"
                   aria-label="Quick templates"
-                  className="h-8 w-8"
                 >
                   <Zap className="w-4 h-4" />
                 </Button>
+                
+                <AnimatePresence>
+                  {showTemplates && (
+                    <motion.div
+                      ref={templatesRef}
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute bottom-full mb-2 right-0 bg-popover border border-border rounded-xl shadow-lg min-w-[180px] overflow-hidden z-50"
+                    >
+                      <div className="p-1">
+                        {templates.map((template) => (
+                          <button
+                            key={template}
+                            onClick={() => insertTemplate(template)}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                          >
+                            {template}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Send button */}
+            <Button
+              variant={canSend ? 'default' : 'ghost'}
+              size="icon"
+              onClick={handleSubmit}
+              disabled={!canSend}
+              className="h-10 w-10 sm:h-9 sm:w-9 flex-shrink-0 touch-manipulation"
+              aria-label={isLoading ? 'Sending...' : 'Send message'}
+            >
+              {isLoading ? (
+                <Square className="w-4 h-4" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+
+          {/* Mobile expanded toolbar */}
+          <AnimatePresence>
+            {isToolbarExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="sm:hidden border-t border-border pt-2 mt-1"
+              >
+                <div className="flex items-center justify-around">
+                  {/* File upload */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept={ALLOWED_FILE_TYPES.join(',')}
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadedFiles.length >= MAX_FILES}
+                    className="h-11 w-11 touch-manipulation"
+                    aria-label="Attach files"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </Button>
+
+                  {/* Emoji picker */}
+                  <div className="relative">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowEmojiPicker(!showEmojiPicker);
+                        setShowTemplates(false);
+                      }}
+                      className="h-11 w-11 touch-manipulation"
+                      aria-label="Insert emoji"
+                    >
+                      <Smile className="w-5 h-5" />
+                    </Button>
+                  </div>
+
+                  {/* Voice input */}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={toggleVoiceRecording}
+                    className={cn('h-11 w-11 touch-manipulation', recording && 'bg-destructive/10 text-destructive')}
+                    aria-label={recording ? 'Stop recording' : 'Start voice input'}
+                  >
+                    <Mic className={cn('w-5 h-5', recording && 'animate-pulse')} />
+                  </Button>
+
+                  {/* Templates */}
+                  <div className="relative">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowTemplates(!showTemplates);
+                        setShowEmojiPicker(false);
+                      }}
+                      className="h-11 w-11 touch-manipulation"
+                      aria-label="Quick templates"
+                    >
+                      <Zap className="w-5 h-5" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Mobile emoji quick picks */}
+                {showEmojiPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 pt-2 border-t border-border"
+                  >
+                    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+                      {Object.keys(EMOJI_CATEGORIES).map((category) => (
+                        <button
+                          key={category}
+                          onClick={() => setSelectedCategory(category)}
+                          className={cn(
+                            'px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0',
+                            selectedCategory === category
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted hover:bg-muted/80'
+                          )}
+                        >
+                          {category}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
+                      {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
+                        <button
+                          key={emoji}
+                          onClick={() => insertEmoji(emoji)}
+                          className="text-2xl p-2 hover:bg-muted rounded transition-colors touch-manipulation"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Mobile templates */}
                 {showTemplates && (
                   <motion.div
-                    ref={templatesRef}
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute bottom-full mb-2 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border min-w-[200px] overflow-hidden"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-2 pt-2 border-t border-border"
                   >
-                    <div className="flex items-center justify-between px-3 py-2 border-b">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Templates
-                      </span>
-                      <button
-                        onClick={() => setShowTemplates(false)}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                        aria-label="Close templates"
-                      >
-                        <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      </button>
-                    </div>
-
-                    <div className="p-2">
+                    <div className="flex flex-wrap gap-2">
                       {templates.map((template) => (
                         <button
                           key={template}
                           onClick={() => insertTemplate(template)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                          className="px-3 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors touch-manipulation"
                         >
                           {template}
                         </button>
@@ -713,47 +619,30 @@ export default function ChatInput({
                     </div>
                   </motion.div>
                 )}
-              </div>
-
-              {/* Send button */}
-              <Button
-                variant={value.trim() ? 'default' : 'ghost'}
-                size="icon"
-                onClick={handleSubmit}
-                disabled={!value.trim() || isLoading}
-                aria-label={isLoading ? 'Sending...' : 'Send message'}
-                className="h-8 w-8"
-              >
-                {isLoading ? (
-                  <Square className="w-4 h-4" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Character counter */}
-          {isNearLimit && (
-            <div className="px-3 pb-1">
-              <span className={cn('text-xs', remainingChars < 50 ? 'text-red-500' : 'text-yellow-600')}>
-                {remainingChars} characters remaining
-              </span>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Drag hint */}
-        {value.trim() && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.5 }}
-            className="text-xs text-center text-muted-foreground mt-2"
-          >
-            Swipe right to send →
-          </motion.p>
-        )}
+          <AnimatePresence>
+            {isNearLimit && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="px-1"
+              >
+                <span className={cn(
+                  'text-xs',
+                  remainingChars < 50 ? 'text-destructive' : 'text-amber-500'
+                )}>
+                  {remainingChars} characters remaining
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -145,11 +145,15 @@
   html {
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
+    /* Prevent iOS text size adjustments */
+    -webkit-text-size-adjust: 100%;
   }
   
   body {
     @apply bg-background text-foreground font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
   }
   
   /* Smooth scrolling */
@@ -159,8 +163,8 @@
   
   /* Custom scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   
   ::-webkit-scrollbar-track {
@@ -175,9 +179,28 @@
     @apply bg-muted-foreground/30;
   }
   
+  /* Hide scrollbar on mobile for cleaner look */
+  @media (max-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 0;
+      height: 0;
+    }
+  }
+  
   /* Selection */
   ::selection {
     @apply bg-primary/20 text-foreground;
+  }
+  
+  /* Ensure inputs don't zoom on iOS */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+  
+  @media (min-width: 768px) {
+    input, select, textarea {
+      font-size: inherit !important;
+    }
   }
 }
 
@@ -221,9 +244,18 @@
     box-shadow: 0 0 40px -10px hsl(var(--echo-glow) / 0.2);
   }
   
-  /* Touch-friendly */
+  /* Touch-friendly targets - 48px minimum */
   .touch-target {
     @apply min-h-[48px] min-w-[48px];
+  }
+  
+  .touch-target-sm {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Touch manipulation for better mobile UX */
+  .touch-manipulation {
+    touch-action: manipulation;
   }
   
   /* Gradient text */
@@ -249,6 +281,47 @@
   .animated-underline:hover::after {
     @apply w-full;
   }
+  
+  /* Fluid typography classes */
+  .text-fluid-xs {
+    font-size: clamp(0.625rem, 0.6rem + 0.125vw, 0.75rem);
+  }
+  
+  .text-fluid-sm {
+    font-size: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  }
+  
+  .text-fluid-base {
+    font-size: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  }
+  
+  .text-fluid-lg {
+    font-size: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  }
+  
+  .text-fluid-xl {
+    font-size: clamp(1.125rem, 1rem + 0.625vw, 1.25rem);
+  }
+  
+  .text-fluid-2xl {
+    font-size: clamp(1.25rem, 1.1rem + 0.75vw, 1.5rem);
+  }
+  
+  .text-fluid-3xl {
+    font-size: clamp(1.5rem, 1.2rem + 1.5vw, 1.875rem);
+  }
+  
+  .text-fluid-4xl {
+    font-size: clamp(1.875rem, 1.5rem + 1.875vw, 2.25rem);
+  }
+  
+  .text-fluid-5xl {
+    font-size: clamp(2.25rem, 1.75rem + 2.5vw, 3rem);
+  }
+  
+  .text-fluid-6xl {
+    font-size: clamp(2.5rem, 2rem + 2.5vw, 3.75rem);
+  }
 }
 
 @layer utilities {
@@ -264,12 +337,128 @@
     text-wrap: balance;
   }
   
-  /* Safe area padding */
-  .safe-area-inset {
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-    padding-bottom: env(safe-area-inset-bottom);
+  /* Safe area utilities */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0px);
   }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  
+  .safe-area-y {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .safe-area-all {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  
+  /* Margin-based safe areas */
+  .mt-safe {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  
+  .mx-safe {
+    margin-left: env(safe-area-inset-left, 0px);
+    margin-right: env(safe-area-inset-right, 0px);
+  }
+  
+  /* Min height accounting for safe areas */
+  .min-h-screen-safe {
+    min-height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  
+  .h-screen-safe {
+    height: calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Dynamic viewport height for mobile browsers */
+  .min-h-dvh {
+    min-height: 100dvh;
+  }
+  
+  .h-dvh {
+    height: 100dvh;
+  }
+  
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Prevent text selection for UI elements */
+  .select-none-touch {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  
+  /* Landscape orientation adjustments */
+  @media (orientation: landscape) and (max-height: 500px) {
+    .landscape-compact {
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+    }
+    
+    .landscape-hidden {
+      display: none !important;
+    }
+  }
+  
+  /* iOS keyboard handling */
+  @supports (-webkit-touch-callout: none) {
+    .ios-keyboard-fix {
+      position: fixed;
+      width: 100%;
+    }
+  }
+  
+  /* No horizontal overflow for mobile */
+  .overflow-x-clip {
+    overflow-x: clip;
+  }
+}
 
- 
+/* PWA standalone mode adjustments */
+@media (display-mode: standalone) {
+  body {
+    /* Extra top padding for status bar when in standalone mode */
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+/* Notch-aware header */
+@supports (padding: max(0px)) {
+  .header-safe {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+  }
 }

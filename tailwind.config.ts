@@ -7,10 +7,27 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "1.5rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.5rem",
+        lg: "2rem",
+      },
       screens: {
+        xs: "100%",
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
         "2xl": "1400px",
       },
+    },
+    screens: {
+      xs: "320px",
+      sm: "480px",
+      md: "768px",
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
     },
     extend: {
       fontFamily: {
@@ -75,6 +92,31 @@ export default {
           warning: "hsl(var(--echo-warning))",
           glow: "hsl(var(--echo-glow))",
         },
+      },
+      spacing: {
+        "safe-top": "env(safe-area-inset-top)",
+        "safe-bottom": "env(safe-area-inset-bottom)",
+        "safe-left": "env(safe-area-inset-left)",
+        "safe-right": "env(safe-area-inset-right)",
+        "touch": "48px",
+        "touch-sm": "44px",
+      },
+      minHeight: {
+        "touch": "48px",
+        "touch-sm": "44px",
+        "screen-safe": "calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+        "dvh": "100dvh",
+      },
+      minWidth: {
+        "touch": "48px",
+        "touch-sm": "44px",
+      },
+      height: {
+        "screen-safe": "calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom))",
+        "dvh": "100dvh",
+      },
+      maxHeight: {
+        "dvh": "100dvh",
       },
       borderRadius: {
         lg: "var(--radius)",
