@@ -1,17 +1,26 @@
 import { motion } from 'framer-motion';
-import { Moon, Sun, Settings, Trash2 } from 'lucide-react';
+import { Moon, Sun, Settings, Trash2, Download, Share } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/hooks/useTheme';
 import { useHaptics } from '@/hooks/useHaptics';
 import { useApp } from '@/context/AppContext';
 import { SettingsPanel } from '@/components/app/SettingsPanel';
+import { usePWAContext } from '@/context/PWAContext';
 
 export function AppHeader() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { isDark, toggle } = useTheme();
-  const { triggerLight, triggerWarning } = useHaptics();
+  const { triggerLight, triggerWarning, triggerMedium } = useHaptics();
   const { clearMessages } = useApp();
+  const { 
+    canInstall, 
+    isInstalled, 
+    isStandalone, 
+    promptInstall, 
+    platform,
+    openIOSGuide 
+  } = usePWAContext();
 
   const handleThemeToggle = () => {
     triggerLight();
@@ -23,9 +32,20 @@ export function AppHeader() {
     clearMessages();
   };
 
+  const handleInstall = async () => {
+    triggerMedium();
+    if (platform === 'ios') {
+      openIOSGuide();
+    } else {
+      await promptInstall();
+    }
+  };
+
+  const showInstallButton = canInstall && !isInstalled && !isStandalone;
+
   return (
     <>
-      <header className="sticky top-0 z-40 safe-area-inset">
+      <header className="sticky top-0 z-40 safe-area-top">
         <div className="border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3">
           <div className="flex items-center justify-between gap-4 max-w-6xl mx-auto">
             {/* Logo */}
@@ -43,11 +63,28 @@ export function AppHeader() {
 
             {/* Actions */}
             <div className="flex items-center gap-1">
+              {/* Install button */}
+              {showInstallButton && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleInstall}
+                  className="text-muted-foreground h-9 w-9 touch-manipulation"
+                  aria-label="Install app"
+                >
+                  {platform === 'ios' ? (
+                    <Share className="w-4 h-4" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleThemeToggle}
-                className="text-muted-foreground h-9 w-9"
+                className="text-muted-foreground h-9 w-9 touch-manipulation"
               >
                 <motion.div
                   initial={false}
@@ -62,7 +99,7 @@ export function AppHeader() {
                 variant="ghost"
                 size="icon"
                 onClick={handleClear}
-                className="text-muted-foreground h-9 w-9"
+                className="text-muted-foreground h-9 w-9 touch-manipulation"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
@@ -74,7 +111,7 @@ export function AppHeader() {
                   triggerLight();
                   setSettingsOpen(true);
                 }}
-                className="text-muted-foreground h-9 w-9"
+                className="text-muted-foreground h-9 w-9 touch-manipulation"
               >
                 <Settings className="w-4 h-4" />
               </Button>

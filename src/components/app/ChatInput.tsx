@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Square, Paperclip, Smile, Mic, Zap, X, FileText, ImageIcon, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useHaptics } from '@/hooks/useHaptics';
 
 // Constants
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -51,7 +52,8 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const desktopEmojiPickerRef = useRef<HTMLDivElement>(null);
+  const mobileEmojiContainerRef = useRef<HTMLDivElement>(null);
   const templatesRef = useRef<HTMLDivElement>(null);
 
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -61,6 +63,8 @@ export default function ChatInput({
   const [selectedCategory, setSelectedCategory] = useState<string>('Recent');
   const [isToolbarExpanded, setIsToolbarExpanded] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const { triggerLight, triggerMedium } = useHaptics();
 
   const templates = useMemo(
     () => ['Summarize the above', 'Translate to English', 'Explain like I\'m 5', 'Give me key points'],
@@ -91,31 +95,48 @@ export default function ChatInput({
     }
   }, [value]);
 
-  // Click outside to close popovers
+  // Click outside to close popovers (FIXED for mobile)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+    const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       
-      if (showEmojiPicker && emojiPickerRef.current && !emojiPickerRef.current.contains(target)) {
-        setShowEmojiPicker(false);
+      // Check desktop emoji picker
+      if (showEmojiPicker && desktopEmojiPickerRef.current) {
+        const emojiButton = desktopEmojiPickerRef.current.previousElementSibling;
+        if (
+          !desktopEmojiPickerRef.current.contains(target) &&
+          !(emojiButton && emojiButton.contains(target))
+        ) {
+          // Only close if click is truly outside
+          setShowEmojiPicker(false);
+        }
       }
-      if (showTemplates && templatesRef.current && !templatesRef.current.contains(target)) {
-        setShowTemplates(false);
+      
+      // Check templates
+      if (showTemplates && templatesRef.current) {
+        const templateButton = templatesRef.current.previousElementSibling;
+        if (
+          !templatesRef.current.contains(target) &&
+          !(templateButton && templateButton.contains(target))
+        ) {
+          setShowTemplates(false);
+        }
       }
     };
 
+    // Use mousedown for more reliable detection
     document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside, { passive: true });
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
     };
   }, [showEmojiPicker, showTemplates]);
 
   // Handle submit
   const handleSubmit = useCallback(() => {
     if (!value.trim() || isLoading) return;
+
+    triggerMedium();
 
     if (uploadedFiles.length > 0 && onFileAttach) {
       onFileAttach(uploadedFiles.map((f) => f.file));
@@ -126,7 +147,7 @@ export default function ChatInput({
     setShowEmojiPicker(false);
     setShowTemplates(false);
     setIsToolbarExpanded(false);
-  }, [value, isLoading, onSubmit, uploadedFiles, onFileAttach]);
+  }, [value, isLoading, onSubmit, uploadedFiles, onFileAttach, triggerMedium]);
 
   // Keyboard handler
   const handleKeyDown = useCallback(
@@ -209,9 +230,17 @@ export default function ChatInput({
     }
   }, [recording, value, onChange]);
 
-  // Insert emoji
+  // Insert emoji with haptic feedback
   const insertEmoji = useCallback(
-    (emoji: string) => {
+    (emoji: string, e?: React.MouseEvent | React.PointerEvent) => {
+      // Prevent event bubbling on mobile
+      if (e) {
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      
+      triggerLight();
+      
       const textarea = textareaRef.current;
       if (!textarea) {
         onChange(value + emoji);
@@ -229,17 +258,18 @@ export default function ChatInput({
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       });
     },
-    [value, onChange]
+    [value, onChange, triggerLight]
   );
 
   // Insert template
   const insertTemplate = useCallback(
     (template: string) => {
+      triggerLight();
       onChange(value + (value ? '\n\n' : '') + template);
       setShowTemplates(false);
       textareaRef.current?.focus();
     },
-    [value, onChange]
+    [value, onChange, triggerLight]
   );
 
   // Remove file
@@ -247,12 +277,23 @@ export default function ChatInput({
     setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
-  // Format file size
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  // Toggle emoji picker for mobile
+  const toggleMobileEmojiPicker = useCallback((e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    triggerLight();
+    setShowEmojiPicker(prev => !prev);
+    setShowTemplates(false);
+  }, [triggerLight]);
+
+  // Toggle templates for mobile
+  const toggleMobileTemplates = useCallback((e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    triggerLight();
+    setShowTemplates(prev => !prev);
+    setShowEmojiPicker(false);
+  }, [triggerLight]);
 
   const remainingChars = maxLength - value.length;
   const isNearLimit = remainingChars < 100;
@@ -308,7 +349,10 @@ export default function ChatInput({
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setIsToolbarExpanded(!isToolbarExpanded)}
+              onClick={() => {
+                triggerLight();
+                setIsToolbarExpanded(!isToolbarExpanded);
+              }}
               className="h-10 w-10 sm:hidden flex-shrink-0 touch-manipulation"
               aria-label="Toggle toolbar"
             >
@@ -361,12 +405,13 @@ export default function ChatInput({
                 <Paperclip className="w-4 h-4" />
               </Button>
 
-              {/* Emoji picker */}
+              {/* Emoji picker (desktop) */}
               <div className="relative">
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => {
+                    triggerLight();
                     setShowEmojiPicker(!showEmojiPicker);
                     setShowTemplates(false);
                   }}
@@ -379,7 +424,7 @@ export default function ChatInput({
                 <AnimatePresence>
                   {showEmojiPicker && (
                     <motion.div
-                      ref={emojiPickerRef}
+                      ref={desktopEmojiPickerRef}
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -389,7 +434,10 @@ export default function ChatInput({
                         {Object.keys(EMOJI_CATEGORIES).map((category) => (
                           <button
                             key={category}
-                            onClick={() => setSelectedCategory(category)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCategory(category);
+                            }}
                             className={cn(
                               'px-2.5 py-1 rounded-lg text-xs font-medium transition-colors whitespace-nowrap',
                               selectedCategory === category
@@ -405,8 +453,8 @@ export default function ChatInput({
                         {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
                           <button
                             key={emoji}
-                            onClick={() => insertEmoji(emoji)}
-                            className="text-xl hover:bg-muted rounded p-1.5 transition-colors"
+                            onClick={(e) => insertEmoji(emoji, e)}
+                            className="text-xl hover:bg-muted rounded p-1.5 transition-colors touch-manipulation"
                           >
                             {emoji}
                           </button>
@@ -428,12 +476,13 @@ export default function ChatInput({
                 <Mic className={cn('w-4 h-4', recording && 'animate-pulse')} />
               </Button>
 
-              {/* Templates */}
+              {/* Templates (desktop) */}
               <div className="relative">
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => {
+                    triggerLight();
                     setShowTemplates(!showTemplates);
                     setShowEmojiPicker(false);
                   }}
@@ -456,8 +505,11 @@ export default function ChatInput({
                         {templates.map((template) => (
                           <button
                             key={template}
-                            onClick={() => insertTemplate(template)}
-                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              insertTemplate(template);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors touch-manipulation"
                           >
                             {template}
                           </button>
@@ -496,7 +548,7 @@ export default function ChatInput({
                 className="sm:hidden border-t border-border pt-2 mt-1"
               >
                 <div className="flex items-center justify-around">
-                  {/* File upload */}
+                  {/* File upload (mobile) */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -508,7 +560,10 @@ export default function ChatInput({
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => fileInputRef.current?.click()}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                     disabled={uploadedFiles.length >= MAX_FILES}
                     className="h-11 w-11 touch-manipulation"
                     aria-label="Attach files"
@@ -516,109 +571,123 @@ export default function ChatInput({
                     <Paperclip className="w-5 h-5" />
                   </Button>
 
-                  {/* Emoji picker */}
-                  <div className="relative">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setShowEmojiPicker(!showEmojiPicker);
-                        setShowTemplates(false);
-                      }}
-                      className="h-11 w-11 touch-manipulation"
-                      aria-label="Insert emoji"
-                    >
-                      <Smile className="w-5 h-5" />
-                    </Button>
-                  </div>
+                  {/* Emoji picker toggle (mobile) - FIXED */}
+                  <Button
+                    size="icon"
+                    variant={showEmojiPicker ? 'secondary' : 'ghost'}
+                    onPointerDown={toggleMobileEmojiPicker}
+                    className="h-11 w-11 touch-manipulation"
+                    aria-label="Insert emoji"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </Button>
 
-                  {/* Voice input */}
+                  {/* Voice input (mobile) */}
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={toggleVoiceRecording}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      toggleVoiceRecording();
+                    }}
                     className={cn('h-11 w-11 touch-manipulation', recording && 'bg-destructive/10 text-destructive')}
                     aria-label={recording ? 'Stop recording' : 'Start voice input'}
                   >
                     <Mic className={cn('w-5 h-5', recording && 'animate-pulse')} />
                   </Button>
 
-                  {/* Templates */}
-                  <div className="relative">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => {
-                        setShowTemplates(!showTemplates);
-                        setShowEmojiPicker(false);
-                      }}
-                      className="h-11 w-11 touch-manipulation"
-                      aria-label="Quick templates"
-                    >
-                      <Zap className="w-5 h-5" />
-                    </Button>
-                  </div>
+                  {/* Templates toggle (mobile) - FIXED */}
+                  <Button
+                    size="icon"
+                    variant={showTemplates ? 'secondary' : 'ghost'}
+                    onPointerDown={toggleMobileTemplates}
+                    className="h-11 w-11 touch-manipulation"
+                    aria-label="Quick templates"
+                  >
+                    <Zap className="w-5 h-5" />
+                  </Button>
                 </div>
 
-                {/* Mobile emoji quick picks */}
-                {showEmojiPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-2 pt-2 border-t border-border"
-                  >
-                    <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
-                      {Object.keys(EMOJI_CATEGORIES).map((category) => (
-                        <button
-                          key={category}
-                          onClick={() => setSelectedCategory(category)}
-                          className={cn(
-                            'px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0',
-                            selectedCategory === category
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted hover:bg-muted/80'
-                          )}
-                        >
-                          {category}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
-                      {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => insertEmoji(emoji)}
-                          className="text-2xl p-2 hover:bg-muted rounded transition-colors touch-manipulation"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+                {/* Mobile emoji picker - FIXED with proper container ref */}
+                <AnimatePresence mode="wait">
+                  {showEmojiPicker && (
+                    <motion.div
+                      ref={mobileEmojiContainerRef}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="mt-2 pt-2 border-t border-border"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      {/* Category tabs */}
+                      <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
+                        {Object.keys(EMOJI_CATEGORIES).map((category) => (
+                          <button
+                            key={category}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              triggerLight();
+                              setSelectedCategory(category);
+                            }}
+                            className={cn(
+                              'px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0 touch-manipulation',
+                              selectedCategory === category
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted hover:bg-muted/80'
+                            )}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* Emoji grid */}
+                      <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
+                        {EMOJI_CATEGORIES[selectedCategory as keyof typeof EMOJI_CATEGORIES]?.map((emoji) => (
+                          <button
+                            key={emoji}
+                            onPointerDown={(e) => insertEmoji(emoji, e)}
+                            className="text-2xl p-2 hover:bg-muted active:bg-muted rounded transition-colors touch-manipulation min-h-[44px] min-w-[44px] flex items-center justify-center"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                {/* Mobile templates */}
-                {showTemplates && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-2 pt-2 border-t border-border"
-                  >
-                    <div className="flex flex-wrap gap-2">
-                      {templates.map((template) => (
-                        <button
-                          key={template}
-                          onClick={() => insertTemplate(template)}
-                          className="px-3 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg transition-colors touch-manipulation"
-                        >
-                          {template}
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
+                {/* Mobile templates - FIXED */}
+                <AnimatePresence mode="wait">
+                  {showTemplates && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.15 }}
+                      className="mt-2 pt-2 border-t border-border"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        {templates.map((template) => (
+                          <button
+                            key={template}
+                            onPointerDown={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              insertTemplate(template);
+                            }}
+                            className="px-3 py-2 text-sm bg-muted hover:bg-muted/80 active:bg-muted/60 rounded-lg transition-colors touch-manipulation min-h-[44px]"
+                          >
+                            {template}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
             )}
           </AnimatePresence>
