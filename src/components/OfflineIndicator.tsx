@@ -1,25 +1,29 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { WifiOff, Wifi } from 'lucide-react';
-import { usePWA } from '@/hooks/usePWA';
+import { usePWAContext } from '@/context/PWAContext';
 import { useEffect, useState } from 'react';
+import { useHaptics } from '@/hooks/useHaptics';
 
 export function OfflineIndicator() {
-  const { isOnline } = usePWA();
+  const { isOnline } = usePWAContext();
+  const { triggerWarning, triggerMedium } = useHaptics();
   const [showReconnected, setShowReconnected] = useState(false);
   const [wasOffline, setWasOffline] = useState(false);
 
   useEffect(() => {
     if (!isOnline) {
       setWasOffline(true);
+      triggerWarning();
     } else if (wasOffline && isOnline) {
       setShowReconnected(true);
+      triggerMedium();
       const timer = setTimeout(() => {
         setShowReconnected(false);
         setWasOffline(false);
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [isOnline, wasOffline]);
+  }, [isOnline, wasOffline, triggerWarning, triggerMedium]);
 
   return (
     <AnimatePresence>
