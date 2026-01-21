@@ -47,7 +47,7 @@ function AppContent() {
     setShowSandbox
   } = useApp();
 
-  const { triggerSuccess, triggerError, triggerThinking, stop: stopHaptics } = useHaptics();
+  const { triggerConfirmation, triggerError, stop: stopHaptics } = useHaptics();
   const [mobileView, setMobileView] = useState<'chat' | 'code'>('chat');
 
   // Multiple sandboxes
@@ -253,7 +253,7 @@ function AppContent() {
 
     setInput('');
     setIsLoading(true);
-    triggerThinking(10000);
+    // No haptics during loading - only on completion
 
     try {
       const conversationHistory = [
@@ -266,8 +266,8 @@ function AppContent() {
         currentCode: activeSandbox?.files.map(f => `// ${f.filename}\n${f.code}`).join('\n\n'),
       });
 
-      stopHaptics();
-      triggerSuccess();
+      // Single subtle confirmation haptic on completion
+      triggerConfirmation();
 
       const assistantMessageId = (Date.now() + 1).toString();
       addMessage({
@@ -402,7 +402,6 @@ function AppContent() {
       }
 
     } catch (error) {
-      stopHaptics();
       triggerError();
       const errorMessage = error instanceof Error ? error.message : 'Something went wrong';
       toast.error(errorMessage);
@@ -423,10 +422,9 @@ function AppContent() {
     addMessage,
     setInput,
     setIsLoading,
-    triggerSuccess,
+    triggerConfirmation,
     triggerError,
-    triggerThinking,
-    stopHaptics,
+    setShowSandbox,
     setShowSandbox,
     parseMarkdownCodeBlocks,
     parseCodeFromResponse,
